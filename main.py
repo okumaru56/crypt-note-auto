@@ -1,6 +1,6 @@
 import os
 import feedparser
-import google.generativeai as genai
+import google.genai
 from email.mime.text import MIMEText
 import smtplib
 from datetime import datetime
