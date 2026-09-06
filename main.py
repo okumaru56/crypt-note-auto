@@ -42,7 +42,7 @@ def generate_article(news_text):
     )
 
     model = genai.GenerativeModel(
-        "gemini-2.5-pro"
+        "gemini-3.1-pro-preview"
     )
 
     with open("prompt.txt", "r", encoding="utf-8") as f:
