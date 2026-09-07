@@ -28,10 +28,10 @@ def get_news():
             for entry in feed.entries[:5]:
                 summary = clean_html(entry.get('summary', ''))
 
-　　　articles.append(    f"""
-　　　Title: {entry.title}
-　　　Date: {entry.get('published', entry.get('updated', '不明'))}
-　　　Summary: {clean_html(entry.get('summary', ''))}
+    articles.append(    f"""
+    Title: {entry.title}
+    Date: {entry.get('published', entry.get('updated', '不明'))}
+    Summary: {clean_html(entry.get('summary', ''))}
 """
 )
 
