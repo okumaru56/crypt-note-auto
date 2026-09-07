@@ -27,21 +27,18 @@ def get_news():
             feed = feedparser.parse(url)
             for entry in feed.entries[:5]:
                 summary = clean_html(entry.get('summary', ''))
+                published_date = entry.get('published', entry.get('updated', '日付不明'))
+                
+                articles.append(
+                    f"Title: {entry.title}\n"
+                    f"Date: {published_date}\n"
+                    f"Summary: {summary}\n"
+                )
+        except Exception as e:
+            print(f"Error fetching {url}: {e}")
 
-    articles.append(    f"""
-    Title: {entry.title}
-    Date: {entry.get('published', entry.get('updated', '不明'))}
-    Summary: {clean_html(entry.get('summary', ''))}
-"""
-    )
+    return "\n---\n".join(articles)
 
-   # articles.append(
-                #   f"Title:\n{entry.title}\n\nSummary:\n{summary}\n"
-                # )
-except Exception as e:
-            print(f"Warning: Failed to fetch RSS feed {url}: {e}")
-
-return "\n---\n".join(articles)
 
 
 def generate_article(news_text):
