@@ -27,9 +27,18 @@ def get_news():
             feed = feedparser.parse(url)
             for entry in feed.entries[:5]:
                 summary = clean_html(entry.get('summary', ''))
-                articles.append(
-                    f"Title:\n{entry.title}\n\nSummary:\n{summary}\n"
-                )
+
+　　　articles.append(
+                   f"""
+　　　Title: {entry.title}
+　　　Date: {entry.get('published', entry.get('updated', '不明'))}
+　　　Summary: {clean_html(entry.get('summary', ''))}
+"""
+)
+
+   # articles.append(
+                #   f"Title:\n{entry.title}\n\nSummary:\n{summary}\n"
+                # )
         except Exception as e:
             print(f"Warning: Failed to fetch RSS feed {url}: {e}")
 
@@ -46,8 +55,13 @@ def generate_article(news_text):
 
     with open(prompt_path, "r", encoding="utf-8") as f:
         prompt = f.read()
+    today_str = datetime.now().strftime("%Y年%m月%d日")
+    
+    # プロンプトの冒頭に今日の日付を明記して渡す（2026/9/8）
+    final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    final_prompt = f"{prompt}\n\n{news_text}"
+    
+    # final_prompt = f"{prompt}\n\n{news_text}"
 
     max_retries = 3
     retry_delay = 45  # 429エラー時は45秒待機して再試行
