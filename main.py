@@ -7,6 +7,14 @@ from google.genai import errors
 from email.mime.text import MIMEText
 import smtplib
 from datetime import datetime
+from zoneinfo import ZoneInfo  # Python 3.9以降で標準搭載
+
+# 日本時間（JST）で現在日時を取得
+jst = ZoneInfo("Asia/Tokyo")
+now_jst = datetime.now(jst)
+
+# 日付文字列を作成（例: 2026-09-08 または 2026年09月08日）
+today_str = now_jst.strftime("%Y-%m-%d")
 
 RSS_FEEDS = [
     "https://www.coindesk.com/arc/outboundfeeds/rss/",
