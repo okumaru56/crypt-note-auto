@@ -52,7 +52,7 @@ def get_news():
 def generate_article(news_text):
     client = genai.Client()
 
-    base_dir = os.pat.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     prompt_path = os.path.join(base_dir, "prompt.txt")
 
     with open(prompt_path, "r", encoding="utf-8") as f:
