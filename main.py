@@ -48,27 +48,26 @@ def get_news():
     return "\n---\n".join(articles)
 
 
+import time
+from google.genai import errors
 
 def generate_article(news_text):
-    # GEMINI_API_KEY 環境変数を自動認識します
     client = genai.Client()
 
-    # main.py と同じ階層にある prompt.txt を安全に取得
     base_dir = os.path.dirname(os.path.abspath(__file__))
     prompt_path = os.path.join(base_dir, "prompt.txt")
 
     with open(prompt_path, "r", encoding="utf-8") as f:
         prompt = f.read()
-    today_str = datetime.now().strftime("%Y年%m月%d日")
-    
-    # プロンプトの冒頭に今日の日付を明記して渡す（2026/9/8）
+
+    # JSTでの日付組み込み（前回の修正）
+    jst = ZoneInfo("Asia/Tokyo")
+    today_str = datetime.now(jst).strftime("%Y年%m月%d日")
+
     final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    
-    # final_prompt = f"{prompt}\n\n{news_text}"
-
-    max_retries = 3
-    retry_delay = 45  # 429エラー時は45秒待機して再試行
+    max_retries = 5       # 最大5回まで再試行
+    retry_delay = 40      # 混雑時は40秒待機
 
     for attempt in range(max_retries):
         try:
@@ -78,14 +77,21 @@ def generate_article(news_text):
             )
             return response.text
         except errors.APIError as e:
-            if "RESOURCE_EXHAUSTED" in str(e) or getattr(e, 'code', None) == 429:
-                print(f"Quota exceeded (429). Retrying in {retry_delay}s... ({attempt + 1}/{max_retries})")
+            # エラーメッセージまたはステータスコードから 429 / 503 を判定
+            err_msg = str(e)
+            is_busy = (
+                "UNAVAILABLE" in err_msg or 
+                "RESOURCE_EXHAUSTED" in err_msg or 
+                getattr(e, 'code', None) in [429, 503]
+            )
+
+            if is_busy and attempt < max_retries - 1:
+                print(f"API busy/unavailable (Attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay}s...")
                 time.sleep(retry_delay)
             else:
                 raise e
 
-    raise RuntimeError("Failed to generate article after maximum retries due to quota limits.")
-
+    raise RuntimeError("Failed to generate article after maximum retries due to server availability or quota limits.")
 
 def send_mail(article):
     sender = os.environ["GMAIL_ADDRESS"]
