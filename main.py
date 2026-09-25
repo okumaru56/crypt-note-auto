@@ -62,11 +62,11 @@ def generate_article(news_text):
 
     final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    # 試行するモデルの優先順リスト（メインが高負荷ならサブモデルへ自動切替）
-    candidate_models = ["gemini-3.6-flash", "gemini-2.5-flash"]
+    # 利用可能なモデルの優先リスト（3.8-flash を予備に設定）
+    candidate_models = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-1.5-flash"]
     
     max_retries_per_model = 3
-    base_delay = 25  # 初期待機時間（秒）
+    base_delay = 25
 
     for model_name in candidate_models:
         print(f"--- モデル {model_name} で処理を開始します ---")
@@ -82,10 +82,15 @@ def generate_article(news_text):
                 return response.text
 
             except Exception as e:
+                err_msg = str(e)
                 print(f"エラー発生 ({model_name} / 試行 {attempt}): {type(e).__name__} - {e}")
                 
+                # 404 (NOT_FOUND) の場合はリトライせず即座に次のモデルへスキップ
+                if "404" in err_msg or "NOT_FOUND" in err_msg:
+                    print(f"モデル {model_name} が存在しないか非推奨のため、次のモデルへ移行します。")
+                    break
+
                 if attempt < max_retries_per_model:
-                    # 25s -> 50s と徐々に待機時間を延ばす（指数バックオフ）
                     current_delay = base_delay * attempt
                     print(f"{current_delay}秒待機して再試行します...")
                     time.sleep(current_delay)
@@ -93,6 +98,7 @@ def generate_article(news_text):
                     print(f"{model_name} でのリトライ上限に達しました。次のモデルを試行します。")
 
     raise RuntimeError("すべての候補モデルで API 呼び出しに失敗しました。")
+
 
 
 def send_mail(article):
