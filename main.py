@@ -48,7 +48,6 @@ def get_news():
     return "\n---\n".join(articles)
 
 
-
 def generate_article(news_text):
     client = genai.Client()
 
@@ -63,30 +62,38 @@ def generate_article(news_text):
 
     final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    max_retries = 3      # 試行回数を3回に絞る
-    retry_delay = 20     # 待機時間を20秒に短縮
+    # 試行するモデルの優先順リスト（メインが高負荷ならサブモデルへ自動切替）
+    candidate_models = ["gemini-3.6-flash", "gemini-2.5-flash"]
+    
+    max_retries_per_model = 3
+    base_delay = 25  # 初期待機時間（秒）
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            print(f"Gemini API 呼び出し開始 (試行 {attempt}/{max_retries})...")
-            response = client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=final_prompt
-            )
-            print("Gemini API 呼び出し成功")
-            return response.text
+    for model_name in candidate_models:
+        print(f"--- モデル {model_name} で処理を開始します ---")
+        
+        for attempt in range(1, max_retries_per_model + 1):
+            try:
+                print(f"Gemini API 呼び出し開始 ({model_name} / 試行 {attempt}/{max_retries_per_model})...")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=final_prompt
+                )
+                print(f"Gemini API 呼び出し成功 ({model_name})")
+                return response.text
 
-        except Exception as e:
-            print(f"エラー発生 (試行 {attempt}/{max_retries}): {type(e).__name__} - {e}")
-            
-            if attempt < max_retries:
-                print(f"{retry_delay}秒待機して再試行します...")
-                time.sleep(retry_delay)
-            else:
-                print("最大試行回数に達したため処理を中断します。")
-                raise e
+            except Exception as e:
+                print(f"エラー発生 ({model_name} / 試行 {attempt}): {type(e).__name__} - {e}")
+                
+                if attempt < max_retries_per_model:
+                    # 25s -> 50s と徐々に待機時間を延ばす（指数バックオフ）
+                    current_delay = base_delay * attempt
+                    print(f"{current_delay}秒待機して再試行します...")
+                    time.sleep(current_delay)
+                else:
+                    print(f"{model_name} でのリトライ上限に達しました。次のモデルを試行します。")
 
-    raise RuntimeError("Failed to generate article after retries.")
+    raise RuntimeError("すべての候補モデルで API 呼び出しに失敗しました。")
+
 
 def send_mail(article):
     sender = os.environ["GMAIL_ADDRESS"]
