@@ -47,7 +47,6 @@ def get_news():
 
     return "\n---\n".join(articles)
 
-
 def generate_article(news_text):
     client = genai.Client()
 
@@ -62,11 +61,15 @@ def generate_article(news_text):
 
     final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    # 利用可能なモデルの優先リスト（3.8-flash を予備に設定）
-    candidate_models = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-1.5-flash"]
+    # 確実に利用可能なモデル候補（軽量モデルを上位に配置して混雑を回避）
+    candidate_models = [
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-3.6-flash",
+    ]
     
     max_retries_per_model = 3
-    base_delay = 25
+    base_delay = 45  # 待機時間を45秒に延長
 
     for model_name in candidate_models:
         print(f"--- モデル {model_name} で処理を開始します ---")
@@ -85,9 +88,9 @@ def generate_article(news_text):
                 err_msg = str(e)
                 print(f"エラー発生 ({model_name} / 試行 {attempt}): {type(e).__name__} - {e}")
                 
-                # 404 (NOT_FOUND) の場合はリトライせず即座に次のモデルへスキップ
+                # 404 (NOT_FOUND) の場合はリトライせず即座に次のモデルへ
                 if "404" in err_msg or "NOT_FOUND" in err_msg:
-                    print(f"モデル {model_name} が存在しないか非推奨のため、次のモデルへ移行します。")
+                    print(f"モデル {model_name} が存在しないためスキップします。")
                     break
 
                 if attempt < max_retries_per_model:
@@ -98,6 +101,7 @@ def generate_article(news_text):
                     print(f"{model_name} でのリトライ上限に達しました。次のモデルを試行します。")
 
     raise RuntimeError("すべての候補モデルで API 呼び出しに失敗しました。")
+
 
 
 
