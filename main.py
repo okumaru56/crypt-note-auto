@@ -46,6 +46,11 @@ def get_news():
             print(f"Error fetching {url}: {e}")
 
     return "\n---\n".join(articles)
+import os
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from google import genai
 
 def generate_article(news_text):
     client = genai.Client()
@@ -61,15 +66,15 @@ def generate_article(news_text):
 
     final_prompt = f"本日の日付: {today_str}\n\n{prompt}\n\n{news_text}"
 
-    # 確実に利用可能なモデル候補（軽量モデルを上位に配置して混雑を回避）
+    # 最新の現行モデルリスト（軽量な 3.5-flash-lite を最優先に配置）
     candidate_models = [
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
         "gemini-3.6-flash",
     ]
     
     max_retries_per_model = 3
-    base_delay = 45  # 待機時間を45秒に延長
+    base_delay = 45
 
     for model_name in candidate_models:
         print(f"--- モデル {model_name} で処理を開始します ---")
@@ -101,9 +106,6 @@ def generate_article(news_text):
                     print(f"{model_name} でのリトライ上限に達しました。次のモデルを試行します。")
 
     raise RuntimeError("すべての候補モデルで API 呼び出しに失敗しました。")
-
-
-
 
 def send_mail(article):
     sender = os.environ["GMAIL_ADDRESS"]
